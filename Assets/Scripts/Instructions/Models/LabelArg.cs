@@ -1,4 +1,4 @@
-namespace Instructions.Models {
+namespace Zachclone.Instructions.Models {
     public class LabelArg {
         public string Label;
 

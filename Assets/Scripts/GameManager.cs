@@ -1,31 +1,83 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System;
 using UnityEngine;
 
-public class GameManager : MonoBehaviour {
-    public Chip chip;
-    public float AdvanceStepTime = .01f;
-    
-    private float _waitTime = .5f;
-    private bool runAdvance = false;
-    private bool runSimulation = false;
+namespace Zachclone {
+    public class GameManager : MonoBehaviour {
+        public float SimulateStepTime = .5f;
+        public float AdvanceStepTime = .01f;
+        public Chip chip;
 
-    private float nextActionTime = 0f;
-    
-    void Update() {
-        if (runAdvance) {
+        private int currentTick;
+
+        private float nextActionTime;
+
+
+        public bool IsRunning { get; protected set; }
+        public bool IsRunningAdvance { get; protected set; }
+        public bool IsRunningSimulation { get; protected set; }
+
+        private void Initialize() {
+            IsRunning = chip.Enable();
+            currentTick = 0;
+        }
+
+        public void Stop() {
+            chip.Disable();
+            IsRunning = false;
+            IsRunningAdvance = false;
+            IsRunningSimulation = false;
+        }
+
+        public void Pause() {
+            throw new NotImplementedException();
+        }
+
+        public void Step() {
+            if (!IsRunning) {
+                Initialize();
+            } else {
+                chip.Step();
+                if (chip.IsSleeping) {
+                    chip.Step();
+                    currentTick++;
+                }
+            }
+        }
+
+        public void Advance() {
+            if (!IsRunning) {
+                Initialize();
+            } else {
+                IsRunningAdvance = true;
+            }
+        }
+
+        public void Simulate() {
+            throw new NotImplementedException();
+        }
+        
+        private void Update() {
+            if (!IsRunning) return;
+
+            if (IsRunningAdvance) IsRunningAdvance = !AdvanceInternal(AdvanceStepTime);
+
+            if (IsRunningSimulation) {
+            }
+        }
+        
+        /// <summary>
+        ///     Advances chip if stepTime has passed since last advance.
+        /// </summary>
+        /// <param name="stepTime"></param>
+        /// <returns> True if all chips are sleeping. </returns>
+        private bool AdvanceInternal(float stepTime) {
             if (Time.time > nextActionTime) {
                 nextActionTime = Time.time + AdvanceStepTime;
                 chip.Step();
-                if (chip.IsSleeping) {
-                    runAdvance = false;
-                }
+                return chip.IsSleeping;
             }
-            return;
-        }
 
-        if (runSimulation) {
-            
+            return false;
         }
     }
 }

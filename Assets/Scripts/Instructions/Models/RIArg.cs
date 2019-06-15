@@ -1,17 +1,23 @@
 using System;
-using DefaultNamespace;
 
-namespace Instructions.Models {
-    public class SingleRIArg {
+namespace Zachclone.Instructions.Models {
+    public class RIArg {
         public int Int;
         public bool IsInt;
         public Port Port;
 
-        public SingleRIArg(string[] args, Chip chip) {
-            if (args.Length != 1) throw new InstructionValidationException("must take a single integer or port");
+        public RIArg(string arg, Chip chip) {
+            Initialize(arg, chip);
+        }
 
-            if (!int.TryParse(args[0], out var inc)) {
-                if (!Enum.TryParse(args[0].ToUpper(), out Port port))
+        public RIArg(string[] args, Chip chip) {
+            if (args.Length != 1) throw new InstructionValidationException("must take a single integer or port");
+            Initialize(args[0], chip);
+        }
+
+        private void Initialize(string arg, Chip chip) {
+            if (!int.TryParse(arg, out var inc)) {
+                if (!Enum.TryParse(arg.ToUpper(), out Port port))
                     throw new InstructionValidationException("Provided value is not an integer or a valid port.");
 
                 if (!chip.HasPort(port)) throw new InstructionValidationException("The specified port is not valid.");
@@ -26,6 +32,7 @@ namespace Instructions.Models {
 
             Int = inc;
             IsInt = true;
+            
         }
 
         public int GetValue(Chip chip) {

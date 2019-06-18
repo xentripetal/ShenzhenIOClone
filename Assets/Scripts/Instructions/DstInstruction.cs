@@ -20,7 +20,7 @@ namespace Zachclone.Instructions {
             if (pos > 2 || pos < 0) return PCInstruction.INCREMENT;
 
             pos = 2 - pos;
-            var acc = Chip.ReadPort(Port.ACC);
+            var acc = Chip.ReadPort(Register.ACC);
             var isNegative = acc < 0;
             var accStr = Math.Abs(acc).ToString();
             var newValue = (secondArg.GetValue(Chip) % 10).ToString();
@@ -30,7 +30,7 @@ namespace Zachclone.Instructions {
             acc = int.Parse(accStr.Remove(pos, 1).Insert(pos, newValue));
             if (isNegative) acc *= -1;
 
-            Chip.WritePort(Port.ACC, acc);
+            Chip.WritePort(Register.ACC, acc);
             return PCInstruction.INCREMENT;
         }
     }

@@ -9,8 +9,8 @@ namespace Zachclone.Instructions {
         }
 
         public override PCInstruction Execute() {
-            var acc = Chip.ReadPort(Port.ACC);
-            Chip.WritePort(Port.ACC, acc != 0 ? 0 : 100);
+            var acc = Chip.ReadPort(Register.ACC);
+            Chip.WritePort(Register.ACC, acc != 0 ? 0 : 100);
             return PCInstruction.INCREMENT;
         }
     }

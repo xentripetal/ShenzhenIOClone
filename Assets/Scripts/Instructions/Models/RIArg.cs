@@ -4,7 +4,7 @@ namespace Zachclone.Instructions.Models {
     public class RIArg {
         public int Int;
         public bool IsInt;
-        public Port Port;
+        public Register Register;
 
         public RIArg(string arg, Chip chip) {
             Initialize(arg, chip);
@@ -17,12 +17,12 @@ namespace Zachclone.Instructions.Models {
 
         private void Initialize(string arg, Chip chip) {
             if (!int.TryParse(arg, out var inc)) {
-                if (!Enum.TryParse(arg.ToUpper(), out Port port))
+                if (!Enum.TryParse(arg.ToUpper(), out Register port))
                     throw new InstructionValidationException("Provided value is not an integer or a valid port.");
 
                 if (!chip.HasPort(port)) throw new InstructionValidationException("The specified port is not valid.");
 
-                Port = port;
+                Register = port;
                 IsInt = false;
                 return;
             }
@@ -36,7 +36,7 @@ namespace Zachclone.Instructions.Models {
         }
 
         public int GetValue(Chip chip) {
-            return IsInt ? Int : chip.ReadPort(Port);
+            return IsInt ? Int : chip.ReadPort(Register);
         }
     }
 }

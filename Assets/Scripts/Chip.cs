@@ -7,22 +7,38 @@ using Zachclone.Instructions.Models;
 
 namespace Zachclone {
     public class Chip : MonoBehaviour {
-        private int _accumulator;
+        public TMP_Text AccText;
+        public TMP_Text DatText;
+        public TMP_InputField InstructionSource;
+        public RectTransform PCLineRect;
 
-        private int _dataRegister;
+        public string[] InstructionText;
+        public bool IsSleeping;
 
         private List<Instruction> _instructions;
         private Dictionary<string, int> _labels;
         private TestPrefix _testOutcome = TestPrefix.NONE;
-        public TMP_Text AccText;
 
-        public TMP_Text DatText;
-        public TMP_InputField InstructionSource;
+        private Dictionary<Register, Connection> _Connections = new Dictionary<Register, Connection>() {
+            {Register.P0, new Connection(ConnectionType.SIMPLE)},
+            {Register.P1, new Connection(ConnectionType.SIMPLE)},
+            {Register.X0, new Connection(ConnectionType.XBUS)},
+            {Register.X1, new Connection(ConnectionType.XBUS)},
+            {Register.X2, new Connection(ConnectionType.XBUS)},
+            {Register.X3, new Connection(ConnectionType.XBUS)}
+        };
 
+        private int PC {
+            get => _pc;
+            set {
+                _pc = value;
+                if (_pc >= _instructions.Count) {
+                    _pc = 0;
+                }
+            }
+        }
 
-        public string[] InstructionText;
-        public bool IsSleeping;
-        public RectTransform PCLineRect;
+        private int _pc;
 
         private int Accumulator {
             get => _accumulator;
@@ -32,6 +48,8 @@ namespace Zachclone {
             }
         }
 
+        private int _accumulator;
+
         private int DataRegister {
             get => _dataRegister;
             set {
@@ -40,28 +58,43 @@ namespace Zachclone {
             }
         }
 
-        private int PC { get; set; }
+        private int _dataRegister;
 
         public void SetTestOutcome(TestPrefix testPrefix) {
             _testOutcome = testPrefix;
         }
 
-        public int ReadPort(Port port) {
-            if (port == Port.ACC)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="register"></param>
+        /// <returns>Value of port or -1000 if blocking</returns>
+        public int ReadPort(Register register) {
+            if (register == Register.ACC)
                 return Accumulator;
-            if (port == Port.DAT) return DataRegister;
+            if (register == Register.DAT)
+                return DataRegister;
 
-            return 0;
+            return _Connections[register].Read();
         }
 
-        public void WritePort(Port port, int value) {
-            if (port == Port.ACC)
+        public void WritePort(Register register, int value) {
+            if (register == Register.ACC)
                 Accumulator = value;
-            else if (port == Port.DAT) DataRegister = value;
+            else if (register == Register.DAT)
+                DataRegister = value;
+            else {
+                _Connections[register].Write(value);
+            }
         }
 
-        public bool HasPort(Port port) {
-            return true;
+        public bool HasPort(Register register) {
+            if (register == Register.ACC || register == Register.DAT) {
+                return true;
+            }
+
+            var found = _Connections.TryGetValue(register, out var connection);
+            return found && connection.IsWired();
         }
 
         public bool HasLabel(string label) {
@@ -73,6 +106,10 @@ namespace Zachclone {
         public void GoToLabel(string label) {
             PC = _labels[label];
             PCLineRect.anchoredPosition = new Vector2(0, -14f - 17.5f * PC);
+        }
+
+        public void WireRegister(Wire wire, Register register) {
+            _Connections[register].Wire(wire);
         }
 
         public bool Enable() {
@@ -98,7 +135,7 @@ namespace Zachclone {
             parts = parts.Where(s => !string.IsNullOrWhiteSpace(s)).ToArray(); // Trim empty
 
             // Get label and remove from instruction parts
-            label = String.Empty;
+            label = string.Empty;
             var labelSplit = parts[0].Split(':');
             if (labelSplit.Length == 2) {
                 label = labelSplit[0];
@@ -142,14 +179,17 @@ namespace Zachclone {
                         if (_labels.ContainsKey(label)) {
                             throw new InstructionValidationException("Label already exists");
                         }
+
                         _labels.Add(label, x);
                     }
+
                     if (parts.Length == 0 || parts[0] == null || parts[0] == "") continue;
-                    
+
                     _instructions.Add(InstructionFactory.CreateInstruction(parts, this, x, i, testPrefix));
                     x++;
-                } catch (InstructionValidationException e) {
-                    Debug.LogError($"Line {i}: {e.Message}");
+                }
+                catch (InstructionValidationException e) {
+                    Debug.LogError($"Line {i}: {e}");
                     return false;
                 }
             }
@@ -157,39 +197,35 @@ namespace Zachclone {
             return true;
         }
 
-        private void SetValidPC() {
-            if (_instructions.Count == 0) return;
+        private bool SetValidPC() {
+            if (_instructions.Count == 0) return false;
             var currentPc = PC;
             var storedInstr = _instructions[PC];
             while (true) {
                 if (storedInstr.TestPrefix == TestPrefix.NONE || storedInstr.TestPrefix == _testOutcome) break;
-                IncrementPC();
+                PC++;
                 if (PC == currentPc) {
                     Debug.LogError("Infinite Loop Detected");
-                    return;
+                    return false;
                 }
 
                 storedInstr = _instructions[PC];
             }
 
             PCLineRect.anchoredPosition = new Vector2(0, -13f * storedInstr.ActualPos);
+            return true;
         }
 
         public void Step() {
             if (_instructions.Count == 0) return;
-            var storedInstr = _instructions[PC];
-            var pcInstr = storedInstr.Execute();
+            var instr = _instructions[PC];
+            var pcInstr = instr.Execute();
 
-            if (pcInstr != PCInstruction.NOTHING) IncrementPC();
+            if (pcInstr != PCInstruction.NOTHING) PC++;
             SetValidPC();
             if (pcInstr == PCInstruction.RUN_NEXT) {
                 Step();
             }
-        }
-
-        private void IncrementPC() {
-            PC++;
-            if (PC >= _instructions.Count) PC = 0;
         }
     }
 }

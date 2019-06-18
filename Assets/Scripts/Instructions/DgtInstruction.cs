@@ -10,8 +10,8 @@ namespace Zachclone.Instructions {
         
         public override PCInstruction Execute() {
             var pos = arg.GetValue(Chip);
-            var acc = Chip.ReadPort(Port.ACC);
-            if (pos < 3 || pos > -1) Chip.WritePort(Port.ACC, (int) (acc / Math.Pow(10, pos) % 10));
+            var acc = Chip.ReadPort(Register.ACC);
+            if (pos < 3 || pos > -1) Chip.WritePort(Register.ACC, (int) (acc / Math.Pow(10, pos) % 10));
             return PCInstruction.INCREMENT;
         }
     }

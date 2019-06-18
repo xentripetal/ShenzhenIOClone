@@ -14,7 +14,11 @@ namespace Zachclone.Instructions {
         }
 
         public override PCInstruction Execute() {
-            Chip.WritePort(dst.Port, src.GetValue(Chip));
+            var val = src.GetValue(Chip);
+            if (val == -1000) {
+                return PCInstruction.NOTHING;
+            }
+            Chip.WritePort(dst.Register, src.GetValue(Chip));
             return PCInstruction.INCREMENT;
         }
     }

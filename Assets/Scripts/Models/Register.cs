@@ -1,5 +1,5 @@
 namespace Zachclone {
-    public enum Port {
+    public enum Register {
         ACC,
         DAT,
         P0,

@@ -78,14 +78,40 @@ namespace Zachclone {
             return _Connections[register].Read();
         }
 
-        public void WritePort(Register register, int value) {
+        public WritePortResponse WritePort(Register register, int value) {
+            var response = WritePortResponse.WRITTEN;
             if (register == Register.ACC)
                 Accumulator = value;
             else if (register == Register.DAT)
                 DataRegister = value;
             else {
-                _Connections[register].Write(value);
+                var conn = _Connections[register];
+                if (conn.ConnectionType == ConnectionType.SIMPLE || conn.IsNonBlocking) {
+                    conn.Write(value);
+                }
+                // If not active writer and no other active writer, register 
+                // if not active writer and other active writer, wait
+                // if previously wrote value, wait if still is active writer, else increment
+                else {
+                    if (!conn.IsActiveWriter) {
+                        if (!conn.Wire.HasActiveWriter) {
+                            conn.Write(value);
+                            response = WritePortResponse.REGISTERED;
+                        }
+                        else {
+                            response = WritePortResponse.WAITING;
+                        }
+                    }
+                    else {
+                        if (!conn.Wire.HasActiveReader) {
+                            response = WritePortResponse.WAITING;
+                        }
+                        conn.Write(value);
+                    }
+                }
             }
+
+            return response;
         }
 
         public bool HasPort(Register register) {
@@ -109,7 +135,7 @@ namespace Zachclone {
         }
 
         public void WireRegister(Wire wire, Register register) {
-            _Connections[register].Wire(wire);
+            _Connections[register].SetWire(wire);
         }
 
         public bool Enable() {

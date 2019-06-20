@@ -4,6 +4,8 @@ namespace Zachclone.Instructions {
     public class MovInstruction : Instruction {
         private RIArg src;
         private RArg dst;
+
+        private int cachedVal = -1000;
         
         public MovInstruction(Chip chip, string[] args, int relativePos, int actualPos, TestPrefix testPrefix) : base(chip, relativePos, actualPos, testPrefix) {
             if (args.Length != 2) {
@@ -14,11 +16,22 @@ namespace Zachclone.Instructions {
         }
 
         public override PCInstruction Execute() {
-            var val = src.GetValue(Chip);
-            if (val == -1000) {
+            if (cachedVal == -1000) {
+                var val = src.GetValue(Chip);
+
+                if (val == -1000) {
+                    return PCInstruction.NOTHING;
+                }
+                cachedVal = val;
+            }
+
+
+            var writeResponse = Chip.WritePort(dst.Register, cachedVal);
+            if (writeResponse == WritePortResponse.WAITING || writeResponse == WritePortResponse.REGISTERED) {
                 return PCInstruction.NOTHING;
             }
-            Chip.WritePort(dst.Register, src.GetValue(Chip));
+
+            cachedVal = -1000;
             return PCInstruction.INCREMENT;
         }
     }
